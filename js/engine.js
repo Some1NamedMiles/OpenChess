@@ -13,13 +13,20 @@ document.addEventListener("DOMContentLoaded", () => {
     let game = new Chess(); 
     let board = null;
 
+    // SORT THE LINES: e.g., Sort branches so lower difficulty numbers or types run first
+    if (opening.branches && opening.branches.length > 1) {
+        opening.branches.sort((a, b) => {
+            // Priority ordering based on line types (e.g., Main lines first, then side lines)
+            const weight = { "Main Line": 1, "Side Line": 2, "Gambit": 3 };
+            return (weight[a.type] || 9) - (weight[b.type] || 9);
+        });
+    }
+
     let activeBranch = opening.branches[0]; 
     let currentStepIndex = 0;
-    
-    // This master array will hold every single move in chronological order
     let fullLessonSteps = [];
 
-    // View Elements
+    // UI View Elements
     const courseSubTitleHeader = document.getElementById("courseSubTitleHeader");
     const coachSpeechBubbleBubble = document.getElementById("coachSpeechBubbleBubble");
     const learningProgressBarFill = document.getElementById("learningProgressBarFill");
@@ -28,44 +35,59 @@ document.addEventListener("DOMContentLoaded", () => {
 
     courseSubTitleHeader.textContent = `${opening.name} - ${activeBranch.title}`;
 
-    // 1. BUILD THE COMPLETE CHRONOLOGICAL PATH FROM MOVE 1
-    // Parse the baseline introductory moves first
+    // Dynamic database lookup dictionary providing quick strategic reasonings for initial baseline setups
+    const openingReasonings = {
+        "e4": "Occupies the center, claims space, and immediately opens development pathways for the light-squared bishop and queen.",
+        "d4": "Establishes a strong presence in the center while safely keeping the pawn protected by the queen.",
+        "c5": "The Sicilian Defense. Fights for the d4 square using an asymmetrical flank pawn, aiming for complex counter-attacking chances.",
+        "e5": "The most classical response, fighting back directly for equal space and control over the central squares.",
+        "Nf3": "Develops a piece toward the center, prepares kingside castling, and attacks Black's vulnerable e5 square.",
+        "Nc6": "Naturally develops a knight to defend the e5 square and contest the critical d4 break point.",
+        "d6": "Solidifies the central structure, prevents further e5 expansions, and frees up light-squared bishop developmental diagonals.",
+        "Nf6": "The Alekhine or Russian style defense, developing with a direct counter-attack against White's unprotected e4 target."
+    };
+
+    // 1. ASSEMBLE FULL SEQUENCE STARTING FROM MOVE 1
     opening.moves.forEach(moveStr => {
         const parts = moveStr.split(" ").slice(1);
         if (parts[0]) {
+            const whyText = openingReasonings[parts[0]] || "Establishes fundamental strategic positioning, taking space and fighting for the center.";
             fullLessonSteps.push({ 
                 notation: parts[0], 
                 turn: 'w', 
-                explanation: `Let's start learning this line. Play the opening move: **${parts[0]}**.` 
+                explanation: `Play the opening move ${parts[0]}. ${whyText}` 
             });
         }
         if (parts[1]) {
+            const whyText = openingReasonings[parts[1]] || "Responds theoretically to contest control over key breakthrough squares.";
             fullLessonSteps.push({ 
                 notation: parts[1], 
                 turn: 'b', 
-                explanation: `Now react with Black's standard theoretical baseline reply: **${parts[1]}**.` 
+                explanation: `Play ${parts[1]}. ${whyText}` 
             });
         }
     });
 
-    // Append the specific branch variations right after the baseline intro
+    // Append specific branch continuation steps
     activeBranch.steps.forEach(step => {
         let side = step.move.startsWith("White") ? 'w' : 'b';
+        // Strips any potential asterisks hiding inside the data file string feeds
+        let cleanExplanation = step.explanation.replace(/\*\*/g, '');
         fullLessonSteps.push({
             notation: step.notation,
             turn: side,
-            explanation: step.explanation
+            explanation: cleanExplanation
         });
     });
 
-    // 2. INTERACTION RULES (No computer auto-play; player plays EVERYTHING to memorize)
+    // 2. TURN SELECTION AND DRAG FILTERS
     function onDragStart(source, piece, position, orientation) {
         if (game.game_over()) return false;
 
         const currentTask = fullLessonSteps[currentStepIndex];
         if (!currentTask) return false;
 
-        // Block dragging the wrong color piece on a designated turn
+        // Block dragging opponent color pieces during the player's active turn assignments
         if (currentTask.turn === 'w' && piece.search(/^b/) !== -1) return false;
         if (currentTask.turn === 'b' && piece.search(/^w/) !== -1) return false;
     }
@@ -74,7 +96,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentTask = fullLessonSteps[currentStepIndex];
         if (!currentTask) return 'snapback';
 
-        // Test legality
         let moveAttempt = game.move({
             from: source,
             to: target,
@@ -83,27 +104,50 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (moveAttempt === null) return 'snapback';
 
-        // Verify if it matches the text instructions
+        // Check verification string tags
         if (moveAttempt.san !== currentTask.notation) {
-            game.undo(); // Revert logic model state
-            coachSpeechBubbleBubble.textContent = `❌ That's not the target move for this sequence. Follow the guide and try playing: ${currentTask.notation}`;
+            game.undo();
+            coachSpeechBubbleBubble.textContent = `Incorrect move. Follow the guide line and try playing: ${currentTask.notation}`;
             return 'snapback';
         }
 
-        // Correct move made!
+        // Correct user move!
         clearSquareHighlights();
         highlightBoardSquares(source, target);
         
-        // Advance to the next instruction step immediately
         currentStepIndex++;
         updateProgressIndicatorBar();
 
-        // Check if there are more moves left to memorize
-        if (currentStepIndex < fullLessonSteps.length) {
-            const nextTask = fullLessonSteps[currentStepIndex];
-            coachSpeechBubbleBubble.innerHTML = nextTask.explanation;
-        } else {
+        // Trigger automatic progression handling loop
+        processNextSequenceStep();
+    }
+
+    // 3. THE OPPOSITE COLOR PLAYS AUTOMATICALLY FLOW
+    function processNextSequenceStep() {
+        if (currentStepIndex >= fullLessonSteps.length) {
             triggerCourseLineCleared();
+            return;
+        }
+
+        const nextTask = fullLessonSteps[currentStepIndex];
+        coachSpeechBubbleBubble.innerHTML = nextTask.explanation;
+
+        // Automatically fire the move if it belongs to the opposite side
+        // Example: If the user just played White ('w'), the script auto-executes the upcoming Black ('b') move
+        if ((nextTask.turn === 'b' && game.turn() === 'b') || (nextTask.turn === 'w' && game.turn() === 'w')) {
+            setTimeout(() => {
+                let autoMove = game.move(nextTask.notation);
+                board.position(game.fen());
+                
+                clearSquareHighlights();
+                if (autoMove) highlightBoardSquares(autoMove.from, autoMove.to);
+
+                currentStepIndex++;
+                updateProgressIndicatorBar();
+
+                // Recursively check to see if there are more consecutive opponent replies or if control shifts back to user
+                processNextSequenceStep();
+            }, 750);
         }
     }
 
@@ -111,9 +155,9 @@ document.addEventListener("DOMContentLoaded", () => {
         board.position(game.fen());
     }
 
-    // 3. INITIALIZE BOARD AT THE ABSOLUTE STARTING SETUP
+    // Initialize board layout from scratch setup
     board = Chessboard('chessrepsBoard', {
-        position: 'start', // Standard 8x8 setup from scratch
+        position: 'start',
         draggable: true,
         onDragStart: onDragStart,
         onDrop: onDrop,
@@ -121,13 +165,15 @@ document.addEventListener("DOMContentLoaded", () => {
         pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
     });
 
-    // Display the first move instructions on launch
+    // Set first prompt display on script startup execution loops
     if (fullLessonSteps[currentStepIndex]) {
         coachSpeechBubbleBubble.innerHTML = fullLessonSteps[currentStepIndex].explanation;
+        // Handle edge case if first layout instruction begins on an automated sequence step
+        processNextSequenceStep();
     }
     updateProgressIndicatorBar();
 
-    // Helper functions for UI response states
+    // Visual highlights helper parameters
     function highlightBoardSquares(fromSquare, toSquare) {
         $('#chessrepsBoard .square-' + fromSquare).addClass('highlight-yellow');
         $('#chessrepsBoard .square-' + toSquare).addClass('highlight-yellow');
@@ -144,12 +190,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function triggerCourseLineCleared() {
-        coachSpeechBubbleBubble.innerHTML = "🎉 <strong>Line Discovered!</strong> You've played through the entire sequence step-by-step from the starting position and locked it into memory.";
+        coachSpeechBubbleBubble.innerHTML = "🎉 Line Discovered! You've played through the entire sequence step-by-step from the starting position and locked it into memory.";
     }
 
     hintActionBtn.addEventListener("click", () => {
         if (fullLessonSteps[currentStepIndex]) {
-            alert(`Hint: You need to play "${fullLessonSteps[currentStepIndex].notation}"`);
+            alert(`Hint: Play "${fullLessonSteps[currentStepIndex].notation}"`);
         }
     });
 
