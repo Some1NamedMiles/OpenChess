@@ -9,36 +9,46 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    // Core Chess Engine - MUST start completely empty/fresh for Move 1
+    // Core Chess Engine - Absolute clean state from move 1
     let game = new Chess(); 
     let board = null;
 
     let activeBranch = opening.branches[0]; 
     let currentStepIndex = 0;
+    
+    // This master array will hold every single move in chronological order
     let fullLessonSteps = [];
 
-    // UI elements
+    // View Elements
     const courseSubTitleHeader = document.getElementById("courseSubTitleHeader");
     const coachSpeechBubbleBubble = document.getElementById("coachSpeechBubbleBubble");
     const learningProgressBarFill = document.getElementById("learningProgressBarFill");
     const navQuitBtn = document.getElementById("navQuitBtn");
     const hintActionBtn = document.getElementById("hintActionBtn");
 
-    courseSubTitleHeader.textContent = opening.name;
+    courseSubTitleHeader.textContent = `${opening.name} - ${activeBranch.title}`;
 
-    // --- PARSE ENTIRE LINE FROM MOVE 1 ---
-    // Extract base opening moves dynamically
+    // 1. BUILD THE COMPLETE CHRONOLOGICAL PATH FROM MOVE 1
+    // Parse the baseline introductory moves first
     opening.moves.forEach(moveStr => {
         const parts = moveStr.split(" ").slice(1);
         if (parts[0]) {
-            fullLessonSteps.push({ notation: parts[0], turn: 'w', explanation: `Let's learn the ${opening.name}. Start by playing **${parts[0]}**.` });
+            fullLessonSteps.push({ 
+                notation: parts[0], 
+                turn: 'w', 
+                explanation: `Let's start learning this line. Play the opening move: **${parts[0]}**.` 
+            });
         }
         if (parts[1]) {
-            fullLessonSteps.push({ notation: parts[1], turn: 'b', explanation: `Black plays **${parts[1]}**. Watch the board.` });
+            fullLessonSteps.push({ 
+                notation: parts[1], 
+                turn: 'b', 
+                explanation: `Now react with Black's standard theoretical baseline reply: **${parts[1]}**.` 
+            });
         }
     });
 
-    // Append the branch continuation onto the step sequence
+    // Append the specific branch variations right after the baseline intro
     activeBranch.steps.forEach(step => {
         let side = step.move.startsWith("White") ? 'w' : 'b';
         fullLessonSteps.push({
@@ -48,14 +58,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Drag constraints: only allow dragging the color whose turn it actually is
+    // 2. INTERACTION RULES (No computer auto-play; player plays EVERYTHING to memorize)
     function onDragStart(source, piece, position, orientation) {
         if (game.game_over()) return false;
 
         const currentTask = fullLessonSteps[currentStepIndex];
         if (!currentTask) return false;
 
-        // Block dragging Black pieces on White's turn, and vice-versa
+        // Block dragging the wrong color piece on a designated turn
         if (currentTask.turn === 'w' && piece.search(/^b/) !== -1) return false;
         if (currentTask.turn === 'b' && piece.search(/^w/) !== -1) return false;
     }
@@ -64,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentTask = fullLessonSteps[currentStepIndex];
         if (!currentTask) return 'snapback';
 
-        // Test if the move is legal
+        // Test legality
         let moveAttempt = game.move({
             from: source,
             to: target,
@@ -73,47 +83,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (moveAttempt === null) return 'snapback';
 
-        // Verify if it matches the lesson notation string
+        // Verify if it matches the text instructions
         if (moveAttempt.san !== currentTask.notation) {
-            game.undo(); // Revert logic state immediately
-            coachSpeechBubbleBubble.textContent = `Not quite! Try another square. We want to play ${currentTask.notation}.`;
+            game.undo(); // Revert logic model state
+            coachSpeechBubbleBubble.textContent = `❌ That's not the target move for this sequence. Follow the guide and try playing: ${currentTask.notation}`;
             return 'snapback';
         }
 
-        // Move is correct! Highlight squares
+        // Correct move made!
         clearSquareHighlights();
         highlightBoardSquares(source, target);
         
+        // Advance to the next instruction step immediately
         currentStepIndex++;
         updateProgressIndicatorBar();
 
-        checkForNextSegment();
-    }
-
-    function checkForNextSegment() {
-        if (currentStepIndex >= fullLessonSteps.length) {
+        // Check if there are more moves left to memorize
+        if (currentStepIndex < fullLessonSteps.length) {
+            const nextTask = fullLessonSteps[currentStepIndex];
+            coachSpeechBubbleBubble.innerHTML = nextTask.explanation;
+        } else {
             triggerCourseLineCleared();
-            return;
-        }
-
-        const nextTask = fullLessonSteps[currentStepIndex];
-        coachSpeechBubbleBubble.innerHTML = nextTask.explanation;
-
-        // If the next move belongs to Black (Computer), execute it automatically
-        if (nextTask.turn === 'b') {
-            setTimeout(() => {
-                let autoMove = game.move(nextTask.notation);
-                board.position(game.fen());
-                
-                clearSquareHighlights();
-                if (autoMove) highlightBoardSquares(autoMove.from, autoMove.to);
-
-                currentStepIndex++;
-                updateProgressIndicatorBar();
-
-                // Look ahead to hand control back to user or finish line
-                checkForNextSegment();
-            }, 800);
         }
     }
 
@@ -121,9 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
         board.position(game.fen());
     }
 
-    // Initialize Chessboard at the true 8x8 game starting position
+    // 3. INITIALIZE BOARD AT THE ABSOLUTE STARTING SETUP
     board = Chessboard('chessrepsBoard', {
-        position: 'start', 
+        position: 'start', // Standard 8x8 setup from scratch
         draggable: true,
         onDragStart: onDragStart,
         onDrop: onDrop,
@@ -131,15 +121,13 @@ document.addEventListener("DOMContentLoaded", () => {
         pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
     });
 
-    // Run layout initialization check
+    // Display the first move instructions on launch
     if (fullLessonSteps[currentStepIndex]) {
         coachSpeechBubbleBubble.innerHTML = fullLessonSteps[currentStepIndex].explanation;
-        // Handle edge case: if the first move of the whole file data happens to be Black
-        if (fullLessonSteps[currentStepIndex].turn === 'b') {
-            checkForNextSegment();
-        }
     }
+    updateProgressIndicatorBar();
 
+    // Helper functions for UI response states
     function highlightBoardSquares(fromSquare, toSquare) {
         $('#chessrepsBoard .square-' + fromSquare).addClass('highlight-yellow');
         $('#chessrepsBoard .square-' + toSquare).addClass('highlight-yellow');
@@ -150,17 +138,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateProgressIndicatorBar() {
+        if (fullLessonSteps.length === 0) return;
         let percentage = (currentStepIndex / fullLessonSteps.length) * 100;
         learningProgressBarFill.style.width = `${percentage}%`;
     }
 
     function triggerCourseLineCleared() {
-        coachSpeechBubbleBubble.innerHTML = "🎉 <strong>Line Discovered!</strong> You've completed this variation track flawlessly from the starting position.";
+        coachSpeechBubbleBubble.innerHTML = "🎉 <strong>Line Discovered!</strong> You've played through the entire sequence step-by-step from the starting position and locked it into memory.";
     }
 
     hintActionBtn.addEventListener("click", () => {
         if (fullLessonSteps[currentStepIndex]) {
-            alert(`Hint: Look for the move "${fullLessonSteps[currentStepIndex].notation}"`);
+            alert(`Hint: You need to play "${fullLessonSteps[currentStepIndex].notation}"`);
         }
     });
 
