@@ -3,42 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PawnTheory - Learn App</title>
+    <title>PawnTheory - Course Study</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" crossorigin="anonymous" />
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
     <header>
-        <h1><a href="index.html">PawnTheory<span>.</span></a></h1>
-        <button class="back-action-btn" id="navHomeBtn">← Back</button>
+        <h1><a href="index.html">PawnTheory</a></h1>
+        <div class="nav-right-actions">
+            <button class="footer-btn-outline" id="navQuitBtn">✕ Close Course</button>
+        </div>
     </header>
 
-    <main class="app-container">
-        <section class="board-column">
-            <div class="board-container-box">
-                <div id="interactiveChessboard" style="width: 100%;"></div>
-            </div>
+    <main class="lesson-workspace-wrapper">
+        <section class="board-pane-left">
+            <div id="chessrepsBoard" style="width: 100%;"></div>
         </section>
 
-        <section class="sidebar-column">
-            <div class="coach-card" id="coachDisplayCard">
-                <div class="coach-face" id="coachFaceGraphic">👨‍🏫</div>
-                <div class="coach-bubble-content">
-                    <div class="status-text" id="coachStatusField" style="color: var(--accent-primary);">GUIDE</div>
-                    <h2 id="lessonViewTitle">Loading Opening...</h2>
-                    <p id="coachBubbleSpeech">Drag and drop your pieces on the board to follow the tutorial goals.</p>
+        <section class="interactive-panel-right">
+            <div class="interactive-panel-header">
+                📖 <strong>Learn</strong> • <span id="courseSubTitleHeader">Sicilian Defense</span>
+            </div>
+
+            <div class="coach-speech-row">
+                <img src="https://chessboardjs.com/img/chesspieces/wikipedia/wP.png" class="pawn-avatar-icon" alt="Coach Icon">
+                <div class="speech-bubble-white" id="coachSpeechBubbleBubble">
+                    Let's explore this variation line move-by-move. Drag your piece to make the correct choice.
                 </div>
             </div>
 
-            <div class="panel-box">
-                <div class="panel-title">Sequence Progression</div>
-                <div class="moves-flow" id="movesPillFlow">
-                    </div>
-
-                <div class="panel-title" id="actionGridHeader" style="margin-top: 0.5rem;">Select Your Training Line</div>
-                <div class="branch-list-group" id="variationsMenuBox">
-                    </div>
+            <div class="action-footer-row">
+                <button class="footer-btn-outline" id="hintActionBtn">💡 Hint</button>
+                
+                <div class="arrow-controls-box">
+                    <button class="arrow-btn" id="prevLineStepBtn">〈</button>
+                    <button class="arrow-btn" id="nextLineStepBtn">〉</button>
+                </div>
             </div>
         </section>
     </main>
