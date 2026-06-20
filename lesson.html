@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PawnTheory - Interactive Lesson</title>
+    <title>PawnTheory - Interactive Coach</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" crossorigin="anonymous" />
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -14,7 +14,7 @@
     </header>
 
     <main class="lesson-container">
-        <button class="back-btn" onclick="window.location.href='index.html'">← Back to Dashboard</button>
+        <button class="back-btn" id="globalBackBtn">← Back to Dashboard</button>
         
         <div class="engine-workspace">
             <div class="board-wrapper">
@@ -25,16 +25,22 @@
                 <div class="moves-tracker" id="movesTracker">
                     </div>
 
-                <section class="theory-block">
-                    <h2 id="openingTitle">Opening Name</h2>
-                    <p id="openingPhilosophy">Strategic concepts go here.</p>
-                </section>
+                <div class="coach-container" id="coachBox">
+                    <div class="coach-avatar" id="coachAvatar">🤖</div>
+                    <div class="speech-bubble">
+                        <h3 id="openingTitle">Opening Name</h3>
+                        <p id="coachInstruction">Select a strategic roadmap variation below to start training!</p>
+                        <div id="feedbackAlert" class="feedback-alert"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <h3 style="margin-top: 2rem;">Choose Black's response to understand the variation branches:</h3>
-        <section class="branches-container" id="branchesContainer">
-            </section>
+        <div id="actionArea">
+            <h3 id="choicePromptHeader" style="margin-top: 1rem; margin-bottom: 0.5rem;">Select a variation path to test your skills:</h3>
+            <section class="branches-container" id="branchesContainer">
+                </section>
+        </div>
     </main>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
