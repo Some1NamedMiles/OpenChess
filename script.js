@@ -1,31 +1,47 @@
 const container = document.getElementById("openingsContainer");
 const searchBar = document.getElementById("searchBar");
 
-function displayOpenings(list) {
+const openings = [
+  {
+    name: "Italian Game",
+    link: "openings/italian.html",
+    description: "Learn the classic attacking opening."
+  },
+  {
+    name: "London System",
+    link: "openings/london.html",
+    description: "Solid setup for consistent play."
+  },
+  {
+    name: "Sicilian Defense",
+    link: "openings/sicilian.html",
+    description: "Sharp and aggressive response to 1.e4."
+  }
+];
+
+function render(list) {
   container.innerHTML = "";
 
-  list.forEach(opening => {
+  list.forEach(o => {
     const card = document.createElement("div");
-
     card.className = "card";
 
     card.innerHTML = `
-      <h3>${opening.name}</h3>
-      <p>${opening.description}</p>
+      <h3>${o.name}</h3>
+      <p>${o.description}</p>
     `;
+
+    card.onclick = () => {
+      window.location.href = o.link;
+    };
 
     container.appendChild(card);
   });
 }
 
-displayOpenings(openings);
+render(openings);
 
 searchBar.addEventListener("input", () => {
-  const search = searchBar.value.toLowerCase();
-
-  const filtered = openings.filter(opening =>
-    opening.name.toLowerCase().includes(search)
-  );
-
-  displayOpenings(filtered);
+  const value = searchBar.value.toLowerCase();
+  render(openings.filter(o => o.name.toLowerCase().includes(value)));
 });
