@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "c5": "The Sicilian Defense. Fights for the center using an asymmetrical flank pawn.",
         "e5": "The classical response, fighting back directly for equal space.",
         "Nf3": "Develops a piece toward the center and targets the e5 square.",
+        "Bf4": "The London System. Develops the dark-squared bishop outside the pawn chain early.",
         "Bc4": "The Italian Game. Targets Black's weak f7 square right out of the gate.",
         "Nc6": "Naturally develops a knight to defend the center squares.",
         "Nf6": "Develops with a direct counter-attack against White's unprotected e4 pawn."
@@ -69,25 +70,25 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // DETERMINE PLAYER COLOR PERSPECTIVE
-    // Find the first step belonging to the user's branch line to decide their perspective color
-    let primaryUserTurn = 'w'; 
-    if (activeBranch.steps && activeBranch.steps.length > 0) {
-        primaryUserTurn = activeBranch.steps[0].move.startsWith("White") ? 'w' : 'b';
+    // 2. DYNAMICALLY DETECT USER COLOR AS ASSIGNED IN CHESSREPS
+    // In Chessreps, your color matches whoever makes the very first move of the whole course.
+    let primaryUserTurn = 'w';
+    if (fullLessonSteps.length > 0) {
+        primaryUserTurn = fullLessonSteps[0].turn;
     }
 
-    // 2. ENFORCE TURN SELECTION AND DRAG FILTERS
+    // Enforce Turn Selection Restrictions
     function onDragStart(source, piece, position, orientation) {
         if (game.game_over()) return false;
 
         const currentTask = fullLessonSteps[currentStepIndex];
         if (!currentTask) return false;
 
-        // Strict Check: You can only touch the active color whose turn it is
+        // Block pulling pieces if it is the other side's turn
         if (currentTask.turn === 'w' && piece.search(/^b/) !== -1) return false;
         if (currentTask.turn === 'b' && piece.search(/^w/) !== -1) return false;
 
-        // Guard Check: You can only drag your assigned player color. Opponent color belongs to the AI.
+        // Ensure you only touch your assigned color
         if (currentTask.turn !== primaryUserTurn) return false;
     }
 
@@ -153,11 +154,11 @@ document.addEventListener("DOMContentLoaded", () => {
         board.position(game.fen());
     }
 
-    // 4. MOUNT AND AUTO-FLIP PERSPECTIVE POV ORIENTATION
+    // 4. MOUNT AND AUTO-FLIP PERSPECTIVE BASED ON DETECTED ASSIGNMENT
     board = Chessboard('chessrepsBoard', {
         position: 'start',
         draggable: true,
-        orientation: primaryUserTurn === 'w' ? 'white' : 'black', // Auto-flips to Black's side for the Sicilian!
+        orientation: primaryUserTurn === 'w' ? 'white' : 'black', // White for London/Italian, Black for Sicilian response
         onDragStart: onDragStart,
         onDrop: onDrop,
         onSnapEnd: onSnapEnd,
@@ -188,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function triggerCourseLineCleared() {
-        coachSpeechBubbleBubble.innerHTML = "🎉 Line Discovered! You've successfully completed this variation branch step-by-step!";
+        coachSpeechBubbleBubble.innerHTML = "🎉 Line Discovered! You've successfully completed this chess theory branch variation segment!";
     }
 
     hintActionBtn.addEventListener("click", () => {
